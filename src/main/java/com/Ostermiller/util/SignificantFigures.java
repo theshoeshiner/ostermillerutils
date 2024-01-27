@@ -17,6 +17,11 @@
 
 package com.Ostermiller.util;
 
+import java.math.BigDecimal;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * A number with an associated number of significant figures.
  * This class handles parsing numbers, determining the number
@@ -84,6 +89,10 @@ package com.Ostermiller.util;
  */
 public class SignificantFigures extends Number {
 
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(SignificantFigures.class);
+
+	
 	/**
 	 *
 	 */
@@ -368,6 +377,16 @@ public class SignificantFigures extends Number {
 		return mantissa + 1;
 	}
 
+	protected StringBuffer getDigits() {
+		return digits;
+	}
+
+	
+	
+	protected int getMantissa() {
+		return mantissa;
+	}
+
 	/**
 	 * Formats this number.
 	 * If the number is less than 10^-3 or greater than or equal to 10^7,
@@ -384,7 +403,7 @@ public class SignificantFigures extends Number {
 		if (digits == null) return original;
 		StringBuffer digits = new StringBuffer(this.digits.toString());
 		int length = digits.length();
-		if (mantissa <= -4 || mantissa >= 7 ||
+		/*if (mantissa <= -4 || mantissa >= 7 ||
 				(mantissa >= length &&
 				digits.charAt(digits.length()-1) == '0') ||
 				(isZero && mantissa != 0)) {
@@ -395,7 +414,8 @@ public class SignificantFigures extends Number {
 			if (mantissa != 0){
 				digits.append("E" + mantissa);
 			}
-		} else if (mantissa <= -1){
+		} else */
+		if (mantissa <= -1){
 			digits.insert(0, "0.");
 			for (int i=mantissa; i<-1; i++){
 				digits.insert(2, '0');
@@ -528,6 +548,9 @@ public class SignificantFigures extends Number {
 	 * @since ostermillerutils 1.00.00
 	 */
 	private void parse(String number) throws NumberFormatException {
+		
+		LOGGER.debug("parse: {}",number);
+		
 		int length = number.length();
 		digits = new StringBuffer(length);
 		int state = INITIAL;
@@ -697,6 +720,11 @@ public class SignificantFigures extends Number {
 							mantissaStart = i+1;
 							state = MANTISSA;
 						} break;
+						case MIDZEROS: {
+							throw new NumberFormatException (
+									"Trailing zeros are ambiguous at position "+(i-1)
+								);
+						}
 						default: {
 							throw new NumberFormatException (
 								"Unexpected character '" + c + "' at position " + i
@@ -724,11 +752,16 @@ public class SignificantFigures extends Number {
 		}
 		if (digits.length() == 0){
 			if (zeroCount > 0){
+				LOGGER.info("zeroCount: {}",zeroCount);
+				LOGGER.info("leadZeroCount: {}",leadZeroCount);
+				LOGGER.info("mantissa: {}",mantissa);
 				// if nothing but zeros all zeros are significant.
 				for (int j=0; j<zeroCount; j++){
 					digits.append('0');
 				}
-				mantissa += leadZeroCount;
+				
+				mantissa += zeroCount;
+				LOGGER.info("mantissa: {}",mantissa);
 				isZero = true;
 				sign = true;
 			} else {
